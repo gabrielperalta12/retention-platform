@@ -1,0 +1,6 @@
+lead_id,account_name,kam_name,risk_score,risk_reason,revenue,segment
+L-1001,Andes Retail,Ana Torres,0.91,Usage dropped 42% in 30 days,24000,Enterprise
+L-1002,Pacific Foods,Carlos Rivas,0.74,Payment delay and low adoption,12500,Mid Market
+L-1003,Nova Logistics,Ana Torres,0.58,Support tickets increased,18000,Enterprise
+L-1004,Lima Health,Mariana Soto,0.31,Stable account with minor usage dip,9000,SMB
+L-1005,Altura Energy,Carlos Rivas,0.83,Champion left company,31000,Enterprise

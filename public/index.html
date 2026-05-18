@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Retention Monitoring</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Weekly churn risk operations</p>
+        <h1>Retention Monitoring</h1>
+      </div>
+      <form id="uploadForm" class="upload-bar">
+        <label>
+          Week
+          <input id="weekInput" type="date" required />
+        </label>
+        <label class="file-picker">
+          CSV upload
+          <input id="csvInput" type="file" accept=".csv,text/csv" required />
+        </label>
+        <button type="submit">Upload week</button>
+        <button type="button" id="syncLocalButton">Sync local CSV</button>
+      </form>
+    </header>
+
+    <main>
+      <section class="toolbar">
+        <label>
+          Week
+          <select id="weekFilter"></select>
+        </label>
+        <label>
+          KAM
+          <select id="kamFilter"></select>
+        </label>
+        <label>
+          Status
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option>New</option>
+            <option>Contacted</option>
+            <option>In Progress</option>
+            <option>Saved</option>
+            <option>Lost</option>
+            <option>No Action</option>
+          </select>
+        </label>
+        <label>
+          Search
+          <input id="searchInput" type="search" placeholder="Account or lead id" />
+        </label>
+      </section>
+
+      <section class="metrics" aria-label="Dashboard metrics">
+        <article>
+          <span>Total leads</span>
+          <strong id="metricTotal">0</strong>
+        </article>
+        <article>
+          <span>Critical or high</span>
+          <strong id="metricHighRisk">0</strong>
+        </article>
+        <article>
+          <span>Contacted</span>
+          <strong id="metricContacted">0%</strong>
+        </article>
+        <article>
+          <span>Pending action</span>
+          <strong id="metricPending">0</strong>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <aside class="side-panel">
+          <h2>Focus by KAM</h2>
+          <div id="kamBreakdown" class="breakdown"></div>
+        </aside>
+
+        <section class="table-wrap" aria-label="Lead list">
+          <table>
+            <thead>
+              <tr>
+                <th>Lead</th>
+                <th>KAM</th>
+                <th>Risk</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Next follow-up</th>
+                <th>Outcome</th>
+              </tr>
+            </thead>
+            <tbody id="leadTable"></tbody>
+          </table>
+          <div id="emptyState" class="empty-state">Upload a weekly CSV to start monitoring leads.</div>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="leadDialog">
+      <form method="dialog" id="actionForm">
+        <input type="hidden" id="selectedLeadId" />
+        <div class="dialog-header">
+          <div>
+            <p id="dialogLeadMeta" class="eyebrow"></p>
+            <h2 id="dialogTitle"></h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Close">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            Status
+            <select id="statusInput">
+              <option>New</option>
+              <option>Contacted</option>
+              <option>In Progress</option>
+              <option>Saved</option>
+              <option>Lost</option>
+              <option>No Action</option>
+            </select>
+          </label>
+          <label>
+            Next follow-up
+            <input id="followUpInput" type="date" />
+          </label>
+          <label>
+            Outcome
+            <select id="outcomeInput">
+              <option value="">No outcome yet</option>
+              <option>Retained</option>
+              <option>Churned</option>
+              <option>False Positive</option>
+              <option>Escalated</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Action taken
+          <input id="actionInput" placeholder="Call, discount review, usage check, executive escalation..." />
+        </label>
+        <label>
+          Notes
+          <textarea id="notesInput" rows="5" placeholder="Add KAM notes for this lead"></textarea>
+        </label>
+
+        <footer class="dialog-actions">
+          <button value="cancel" type="button" id="cancelDialog">Cancel</button>
+          <button value="default" type="submit">Save action</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
