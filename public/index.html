@@ -1,159 +1,494 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Retention Monitoring</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <header class="app-header">
-      <div>
-        <p class="eyebrow">Weekly churn risk operations</p>
-        <h1>Retention Monitoring</h1>
-      </div>
-      <form id="uploadForm" class="upload-bar">
-        <label>
-          Week
-          <input id="weekInput" type="date" required />
-        </label>
-        <label class="file-picker">
-          CSV upload
-          <input id="csvInput" type="file" accept=".csv,text/csv" required />
-        </label>
-        <button type="submit">Upload week</button>
-        <button type="button" id="syncLocalButton">Sync local CSV</button>
-      </form>
-    </header>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plataforma Comercial</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F3EF;--surface:#FFFFFF;--surface2:#ECEAE4;--border:#E0DDD6;--border2:#C8C5BC;
+  --text:#191815;--text2:#6A6860;--text3:#A8A59E;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+  --r:10px;--rs:6px;
+  --red:#C53030;--red-bg:#FEF2F2;--red-b:#FECACA;
+  --amber:#92400E;--amber-bg:#FFFBEB;--amber-b:#FCD34D;
+  --green:#166534;--green-bg:#F0FDF4;--green-b:#86EFAC;
+  --teal:#0F5F56;--teal-bg:#F0FDFA;--teal-b:#5EEAD4;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
 
-    <main>
-      <section class="toolbar">
-        <label>
-          Week
-          <select id="weekFilter"></select>
-        </label>
-        <label>
-          KAM
-          <select id="kamFilter"></select>
-        </label>
-        <label>
-          Status
-          <select id="statusFilter">
-            <option value="">All statuses</option>
-            <option>New</option>
-            <option>Contacted</option>
-            <option>In Progress</option>
-            <option>Saved</option>
-            <option>Lost</option>
-            <option>No Action</option>
-          </select>
-        </label>
-        <label>
-          Search
-          <input id="searchInput" type="search" placeholder="Account or lead id" />
-        </label>
-      </section>
+/* HEADER */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:200}
+.hdr-brand{font-weight:600;font-size:15px;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hdr-nav{display:flex;gap:2px}
+.nav-btn{padding:6px 14px;border-radius:var(--rs);border:none;background:transparent;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;font-family:var(--sans)}
+.nav-btn.active{background:var(--text);color:#fff}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.hdr-meta{font-size:11px;color:var(--text3);font-family:var(--mono)}
 
-      <section class="metrics" aria-label="Dashboard metrics">
-        <article>
-          <span>Total leads</span>
-          <strong id="metricTotal">0</strong>
-        </article>
-        <article>
-          <span>Critical or high</span>
-          <strong id="metricHighRisk">0</strong>
-        </article>
-        <article>
-          <span>Contacted</span>
-          <strong id="metricContacted">0%</strong>
-        </article>
-        <article>
-          <span>Pending action</span>
-          <strong id="metricPending">0</strong>
-        </article>
-      </section>
+/* KAM SELECTOR — pantalla de bienvenida */
+.kam-screen{max-width:560px;margin:80px auto;padding:0 20px;text-align:center}
+.kam-screen h1{font-size:24px;font-weight:600;letter-spacing:-.04em;margin-bottom:8px}
+.kam-screen p{color:var(--text2);font-size:14px;margin-bottom:36px}
+.kam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;text-align:left;margin-bottom:28px}
+.kam-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px;font-family:var(--sans)}
+.kam-btn:hover{border-color:var(--text);background:var(--surface2)}
+.kam-btn.all{border-style:dashed}
+.kam-av{width:36px;height:36px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--text2);flex-shrink:0}
+.kam-av.all-av{background:var(--surface2)}
+.kam-name{font-size:13px;font-weight:500;line-height:1.3}
+.kam-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.kam-divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+.drive-row{display:flex;gap:8px}
+.drive-input{flex:1;border:1px solid var(--border);border-radius:var(--rs);padding:9px 12px;font-size:12px;font-family:var(--mono);background:var(--surface2);color:var(--text);outline:none}
+.drive-input:focus{border-color:var(--text)}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);transition:background .15s;white-space:nowrap}
+.btn-ghost:hover{background:var(--border)}
+.btn-primary{background:var(--text);color:#fff;border:none;border-radius:var(--rs);padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);transition:opacity .15s}
+.btn-primary:hover{opacity:.8}
+.hint{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:10px;text-align:left;background:var(--surface2);padding:10px 14px;border-radius:var(--rs);line-height:1.8}
 
-      <section class="workspace">
-        <aside class="side-panel">
-          <h2>Focus by KAM</h2>
-          <div id="kamBreakdown" class="breakdown"></div>
-        </aside>
+/* MAIN */
+.main{max-width:1140px;margin:0 auto;padding:22px 20px;display:none}
+.main.visible{display:block}
 
-        <section class="table-wrap" aria-label="Lead list">
-          <table>
-            <thead>
-              <tr>
-                <th>Lead</th>
-                <th>KAM</th>
-                <th>Risk</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th>Next follow-up</th>
-                <th>Outcome</th>
-              </tr>
-            </thead>
-            <tbody id="leadTable"></tbody>
-          </table>
-          <div id="emptyState" class="empty-state">Upload a weekly CSV to start monitoring leads.</div>
-        </section>
-      </section>
-    </main>
+/* KAM BADGE en header */
+.kam-badge{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:5px 12px;font-size:12px;cursor:pointer;transition:background .15s}
+.kam-badge:hover{background:var(--border)}
+.kam-badge-av{width:22px;height:22px;border-radius:50%;background:var(--text);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;flex-shrink:0}
 
-    <dialog id="leadDialog">
-      <form method="dialog" id="actionForm">
-        <input type="hidden" id="selectedLeadId" />
-        <div class="dialog-header">
-          <div>
-            <p id="dialogLeadMeta" class="eyebrow"></p>
-            <h2 id="dialogTitle"></h2>
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
+.stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:6px;font-weight:600}
+.stat-val{font-size:26px;font-weight:600;letter-spacing:-.04em;line-height:1}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.stat.s-alto{border-left:3px solid var(--red)}
+.stat.s-sow{border-left:3px solid var(--teal)}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.chip{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;font-family:var(--sans)}
+.chip.on{background:var(--text);color:#fff;border-color:var(--text)}
+.chip.on-red{background:var(--red);color:#fff;border-color:var(--red)}
+.chip.on-amber{background:#D97706;color:#fff;border-color:#D97706}
+.chip.on-teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.search{margin-left:auto;border:1px solid var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;font-family:var(--sans);background:var(--surface);color:var(--text);outline:none;width:220px}
+.search:focus{border-color:var(--text)}
+
+/* TABLE */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead th{padding:9px 14px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);background:var(--surface2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+thead th:hover{color:var(--text)}
+tbody tr{border-bottom:1px solid var(--bg);cursor:pointer;transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#F8F7F3}
+td{padding:10px 14px;font-size:13px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* FICHA */
+.ficha-row td{padding:0;white-space:normal;overflow:visible}
+.ficha{padding:20px 22px;background:#F8F7F3;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;animation:fi .18s ease}
+@keyframes fi{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.fb{background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:14px 16px}
+.fb h4{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);font-weight:600;margin-bottom:10px}
+.fi{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bg);font-size:12px}
+.fi:last-child{border-bottom:none}
+.fi-l{color:var(--text2)}
+.fi-v{font-weight:500;text-align:right;max-width:58%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arg{background:var(--amber-bg);border:1px solid var(--amber-b);border-radius:var(--rs);padding:13px 15px;font-size:12px;line-height:1.65;color:#78350F;grid-column:1/-1}
+.arg strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;color:var(--amber)}
+.fac{display:flex;gap:8px;grid-column:1/-1;flex-wrap:wrap}
+.btn-sm{padding:7px 14px;border-radius:var(--rs);font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans);border:none;transition:opacity .15s}
+.btn-sm:hover{opacity:.8}
+.btn-call{background:var(--text);color:#fff}
+.btn-sec{background:var(--surface2);color:var(--text);border:1px solid var(--border)!important;border:none}
+
+/* BADGES */
+.badge{display:inline-flex;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-alto{background:var(--red-bg);color:var(--red);border:1px solid var(--red-b)}
+.b-medio{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b)}
+.b-bajo{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
+.b-sow{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-b)}
+
+.pb{display:flex;align-items:center;gap:7px}
+.pb-t{width:60px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;flex-shrink:0}
+.pb-f{height:100%;border-radius:2px}
+.pb-v{font-family:var(--mono);font-size:12px;font-weight:500}
+.dpill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:4px;font-weight:500}
+.d-hot{background:#FEE2E2;color:#991B1B}
+.d-warm{background:#FEF3C7;color:#92400E}
+.d-ok{background:var(--surface2);color:var(--text2)}
+.soles{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--teal)}
+
+.empty{text-align:center;padding:48px;color:var(--text3);font-size:13px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:10px 18px;border-radius:var(--rs);font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;z-index:999}
+.toast.show{opacity:1;transform:translateY(0)}
+
+@media(max-width:700px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .ficha{grid-template-columns:1fr}
+  .main{padding:14px}
+  .hdr{padding:0 14px}
+  .search{width:100%;margin-left:0}
+  .kam-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand"><div class="pulse"></div>Comercial</div>
+  <div class="hdr-nav" id="hdrNav" style="display:none">
+    <button class="nav-btn active" onclick="setMod('retencion',this)">Retención</button>
+    <button class="nav-btn" onclick="setMod('crecimiento',this)">SOW</button>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-meta" id="hdrMeta"></span>
+    <div class="kam-badge" id="kamBadge" style="display:none" onclick="volverSelector()">
+      <div class="kam-badge-av" id="kamBadgeAv"></div>
+      <span id="kamBadgeName"></span>
+      <span style="color:var(--text3);font-size:11px">cambiar</span>
+    </div>
+    <button class="btn-ghost" id="btnExp" style="display:none;font-size:12px;padding:6px 12px" onclick="exportCSV()">Exportar</button>
+  </div>
+</div>
+
+<!-- SELECTOR KAM -->
+<div id="kamScreen" class="kam-screen">
+  <h1>Bienvenido</h1>
+  <p>¿Quién eres? Verás solo tus leads asignados.</p>
+  <div class="kam-grid" id="kamGrid"></div>
+  <hr class="kam-divider">
+  <p style="font-size:13px;color:var(--text2);margin-bottom:12px">O carga un nuevo archivo de datos</p>
+  <div class="drive-row">
+    <input class="drive-input" id="driveUrl" value="https://docs.google.com/spreadsheets/d/1Wv3rURiJzR7iwl8TFguP97bOgerc_sVUUTd8qOhztMg/edit?usp=sharing">
+    <button class="btn-ghost" onclick="loadDrive()">Cargar Drive</button>
+    <label class="btn-ghost" style="cursor:pointer">CSV local<input type="file" accept=".csv" id="fileInput" style="display:none"></label>
+  </div>
+  <div class="hint" id="uploadHint" style="display:none"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="main" id="mainDash">
+  <div class="stats" id="statsRow"></div>
+  <div class="toolbar" id="toolbar"></div>
+  <div class="tbl-wrap">
+    <table><thead id="tHead"></thead><tbody id="tBody"></tbody></table>
+    <div class="empty" id="emptyMsg" style="display:none">Sin resultados.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TODAY = new Date();
+let allData=[], kamData=[], currentKam='', mod='retencion', filt='todos', sF='probabilidad', sD=-1, expanded=null;
+
+document.getElementById('hdrMeta').textContent = TODAY.toLocaleDateString('es-PE',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+document.getElementById('fileInput').addEventListener('change',e=>{ if(e.target.files[0]) parseFile(e.target.files[0]); });
+
+// ── CARGA DE DATOS ─────────────────────────────────────────────────────────
+function parseFile(f){ Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>init(r.data)}); }
+
+function loadDrive(){
+  let url=(document.getElementById('driveUrl').value||'').trim();
+  if(!url){toast('Ingresa una URL');return;}
+  if(url.includes('docs.google.com/spreadsheets')){
+    const m=url.match(/\/d\/([\w-]+)/);
+    if(m) url=`https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv`;
+  }
+  toast('Cargando...');
+  fetch(url).then(r=>r.text()).then(t=>init(Papa.parse(t,{header:true,skipEmptyLines:true}).data)).catch(()=>toast('No se pudo cargar — verifica que sea público'));
+}
+
+function norm(row){
+  const k={};
+  for(const key in row) k[key.trim().toLowerCase().replace(/ +/g,'_')]=(row[key]||'').trim();
+  const doc=k.nro_documento||k.documento||k.ruc||k.id||'';
+  const nombre=k.nombre||k.cliente||k.razon_social||'';
+  const nivel=((k.nivel_riesgo||k.riesgo||'Bajo')).charAt(0).toUpperCase()+((k.nivel_riesgo||k.riesgo||'bajo')).slice(1).toLowerCase();
+  const prob=parseFloat((k.probabilidad||'0').toString().replace('%',''))||0;
+  const ultTx=k.ultima_transaccion||k.ultima_tx||'';
+  const oport=parseFloat((k.oportunidad_soles||'0').toString().replace(/[^0-9.]/g,''))||0;
+  let dias=0;
+  if(ultTx){const d=new Date(ultTx);if(!isNaN(d))dias=Math.floor((TODAY-d)/86400000);}
+  return{
+    nro_documento:doc,nombre,nivel:nivel||'Bajo',
+    probabilidad:prob>1?prob:prob*100,
+    ultima_transaccion:ultTx,dias_sin_tx:dias,
+    fecha_alerta:k.fecha_alerta||'',
+    ejecutivo_asignado:k.ejecutivo_asignado||k.ejecutivo||'Sin asignar',
+    oportunidad_soles:oport,
+    frecuencia_tx:k.frecuencia_tx||'',monto_promedio:k.monto_promedio||'',
+    canales:k.canales||'',rubros:k.rubros||'',
+    correo:k.correo||k.email||'',telefono:k.telefono||'',
+  };
+}
+
+function init(raw){
+  if(!raw.length){toast('CSV vacío');return;}
+  allData=raw.map(norm).sort((a,b)=>b.probabilidad-a.probabilidad);
+  buildKamSelector();
+}
+
+// ── SELECTOR KAM ──────────────────────────────────────────────────────────
+function buildKamSelector(){
+  // Detectar KAMs únicos desde los datos
+  const kams=[...new Set(allData.map(r=>r.ejecutivo_asignado).filter(e=>e&&e!=='Sin asignar'))].sort();
+  const grid=document.getElementById('kamGrid');
+
+  const allCount=allData.length;
+  let html=`<button class="kam-btn all" onclick="selectKam('__todos__')">
+    <div class="kam-av all-av" style="font-size:14px;background:var(--surface2)">★</div>
+    <div><div class="kam-name">Ver todo</div><div class="kam-sub">${allCount} leads · lider</div></div>
+  </button>`;
+
+  kams.forEach(k=>{
+    const cnt=allData.filter(r=>r.ejecutivo_asignado===k).length;
+    const alto=allData.filter(r=>r.ejecutivo_asignado===k&&r.nivel==='Alto').length;
+    const ini=k.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    html+=`<button class="kam-btn" onclick="selectKam('${k.replace(/'/g,"\\'")}')">
+      <div class="kam-av">${ini}</div>
+      <div><div class="kam-name">${k}</div><div class="kam-sub">${cnt} leads${alto?` · ${alto} alto`:'·'}</div></div>
+    </button>`;
+  });
+
+  if(!kams.length){
+    html+=`<div style="grid-column:1/-1;font-size:13px;color:var(--text2);padding:16px 0">No se encontró columna <code>ejecutivo_asignado</code> en el CSV.</div>`;
+  }
+
+  grid.innerHTML=html;
+  document.getElementById('uploadHint').style.display='none';
+}
+
+function selectKam(kam){
+  currentKam=kam;
+  kamData = kam==='__todos__' ? allData : allData.filter(r=>r.ejecutivo_asignado===kam);
+
+  // Actualizar badge en header
+  const label = kam==='__todos__' ? 'Todos los leads' : kam;
+  const ini   = kam==='__todos__' ? '★' : kam.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+  document.getElementById('kamBadgeName').textContent=label;
+  document.getElementById('kamBadgeAv').textContent=ini;
+  document.getElementById('kamBadge').style.display='flex';
+  document.getElementById('hdrNav').style.display='flex';
+  document.getElementById('btnExp').style.display='block';
+
+  document.getElementById('kamScreen').style.display='none';
+  document.getElementById('mainDash').classList.add('visible');
+
+  mod='retencion'; filt='todos'; sF='probabilidad'; sD=-1; expanded=null;
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  renderAll();
+}
+
+function volverSelector(){
+  document.getElementById('kamScreen').style.display='block';
+  document.getElementById('mainDash').classList.remove('visible');
+  document.getElementById('kamBadge').style.display='none';
+  document.getElementById('hdrNav').style.display='none';
+  document.getElementById('btnExp').style.display='none';
+  buildKamSelector();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function renderAll(){renderStats();renderHeaders();buildToolbar();renderTable();}
+
+function setMod(m,el){
+  mod=m; filt='todos'; sF=m==='retencion'?'probabilidad':'oportunidad_soles'; sD=-1; expanded=null;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active');
+  renderAll();
+}
+
+function renderStats(){
+  const d=kamData;
+  const alto=d.filter(r=>r.nivel==='Alto').length;
+  const sow=d.reduce((s,r)=>s+r.oportunidad_soles,0);
+  const sin30=d.filter(r=>r.dias_sin_tx>=30).length;
+  const cSow=d.filter(r=>r.oportunidad_soles>0).length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat"><div class="stat-label">Mis clientes</div><div class="stat-val">${d.length}</div><div class="stat-sub">esta semana</div></div>
+    <div class="stat s-alto"><div class="stat-label">Riesgo alto</div><div class="stat-val" style="color:var(--red)">${alto}</div><div class="stat-sub">llamar hoy</div></div>
+    <div class="stat"><div class="stat-label">Sin tx +30d</div><div class="stat-val">${sin30}</div><div class="stat-sub">inactivos</div></div>
+    <div class="stat s-sow"><div class="stat-label">Oportunidad SOW</div><div class="stat-val" style="color:var(--teal);font-size:20px">S/ ${fmt(sow)}</div><div class="stat-sub">${cSow} clientes</div></div>
+    <div class="stat s-sow"><div class="stat-label">Prom. SOW</div><div class="stat-val" style="color:var(--teal);font-size:20px">S/ ${cSow?fmt(Math.round(sow/cSow)):0}</div><div class="stat-sub">por cliente</div></div>`;
+}
+
+function buildToolbar(){
+  const isRet=mod==='retencion';
+  document.getElementById('toolbar').innerHTML=isRet?`
+    <button class="chip on" onclick="setF('todos',this)">Todos</button>
+    <button class="chip" onclick="setF('Alto',this)">Alto riesgo</button>
+    <button class="chip" onclick="setF('Medio',this)">Medio</button>
+    <button class="chip" onclick="setF('Bajo',this)">Bajo</button>
+    <input class="search" id="si" type="text" placeholder="Buscar..." oninput="renderTable()">`:
+    `<button class="chip on" onclick="setF('todos',this)">Todos</button>
+    <button class="chip" onclick="setF('sow_high',this)">Alta oportunidad</button>
+    <input class="search" id="si" type="text" placeholder="Buscar..." oninput="renderTable()">`;
+}
+
+function setF(f,el){
+  filt=f; expanded=null;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on','on-red','on-amber','on-teal'));
+  el.classList.add(f==='Alto'?'on-red':f==='Medio'?'on-amber':f==='sow_high'?'on-teal':'on');
+  renderTable();
+}
+
+function sortBy(f){if(sF===f)sD*=-1;else{sF=f;sD=-1;}expanded=null;renderTable();}
+
+function renderHeaders(){
+  const isRet=mod==='retencion';
+  document.getElementById('tHead').innerHTML=isRet?`<tr>
+    <th style="width:130px" onclick="sortBy('nro_documento')">Documento</th>
+    <th style="width:180px">Cliente</th>
+    <th style="width:120px" onclick="sortBy('probabilidad')">Prob. churn ↕</th>
+    <th style="width:85px">Nivel</th>
+    <th style="width:90px" onclick="sortBy('dias_sin_tx')">Sin tx ↕</th>
+    <th style="width:115px">Última tx</th>
+    <th style="width:120px" onclick="sortBy('oportunidad_soles')">SOW S/ ↕</th>
+  </tr>`:`<tr>
+    <th style="width:130px">Documento</th>
+    <th style="width:180px">Cliente</th>
+    <th style="width:140px" onclick="sortBy('oportunidad_soles')">Oportunidad S/ ↕</th>
+    <th style="width:85px">Nivel</th>
+    <th style="width:120px">Canales</th>
+    <th style="width:130px">Rubros</th>
+    <th style="width:90px" onclick="sortBy('probabilidad')">Riesgo</th>
+  </tr>`;
+}
+
+function renderTable(){
+  const q=((document.getElementById('si')||{}).value||'').toLowerCase();
+  let rows=kamData.filter(r=>{
+    const mf=filt==='todos'?true:filt==='sow_high'?r.oportunidad_soles>5000:r.nivel===filt;
+    const ms=!q||(r.nro_documento||'').includes(q)||(r.nombre||'').toLowerCase().includes(q);
+    return mf&&ms;
+  }).sort((a,b)=>{const va=a[sF]||0,vb=b[sF]||0;return typeof va==='string'?va.localeCompare(vb)*sD:(va-vb)*sD;});
+
+  const body=document.getElementById('tBody');
+  if(!rows.length){body.innerHTML='';document.getElementById('emptyMsg').style.display='block';return;}
+  document.getElementById('emptyMsg').style.display='none';
+  const isRet=mod==='retencion';
+
+  body.innerHTML=rows.map(r=>{
+    const prob=Math.round(r.probabilidad);
+    const pc=prob>=70?'#DC2626':prob>=40?'#D97706':'#16A34A';
+    const nc=r.nivel.toLowerCase();
+    const dc=r.dias_sin_tx>=30?'d-hot':r.dias_sin_tx>=14?'d-warm':'d-ok';
+    const isExp=expanded===r.nro_documento;
+
+    const base=isRet?`
+      <td style="font-family:var(--mono);font-size:12px">${r.nro_documento||'—'}</td>
+      <td><div style="font-weight:500">${r.nombre||'—'}</div>${r.fecha_alerta?`<div style="font-size:11px;color:var(--text3)">${r.fecha_alerta}</div>`:''}</td>
+      <td><div class="pb"><div class="pb-t"><div class="pb-f" style="width:${prob}%;background:${pc}"></div></div><span class="pb-v" style="color:${pc}">${prob}%</span></div></td>
+      <td><span class="badge b-${nc}">${r.nivel}</span></td>
+      <td><span class="dpill ${dc}">${r.dias_sin_tx}d</span></td>
+      <td style="font-size:12px;color:var(--text2)">${r.ultima_transaccion||'—'}</td>
+      <td>${r.oportunidad_soles?`<span class="soles">S/ ${fmt(r.oportunidad_soles)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>`:
+    `<td style="font-family:var(--mono);font-size:12px">${r.nro_documento||'—'}</td>
+      <td><div style="font-weight:500">${r.nombre||'—'}</div></td>
+      <td><span class="soles">S/ ${fmt(r.oportunidad_soles)}</span></td>
+      <td><span class="badge b-${nc}">${r.nivel}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${r.canales||'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${r.rubros||'—'}</td>
+      <td><div class="pb"><div class="pb-t"><div class="pb-f" style="width:${prob}%;background:${pc}"></div></div><span class="pb-v" style="color:${pc}">${prob}%</span></div></td>`;
+
+    let ficha='';
+    if(isExp){
+      const arg=genArg(r);
+      ficha=`<tr class="ficha-row"><td colspan="7">
+        <div class="ficha">
+          <div class="fb"><h4>Contacto</h4>
+            ${fi('Teléfono',r.telefono||'—')}${fi('Correo',r.correo||'—')}
           </div>
-          <button class="icon-button" value="cancel" aria-label="Close">×</button>
+          <div class="fb"><h4>Comportamiento</h4>
+            ${fi('Frecuencia',r.frecuencia_tx||'—')}
+            ${fi('Monto prom.',r.monto_promedio?'S/ '+r.monto_promedio:'—')}
+            ${fi('Canales',r.canales||'—')}${fi('Rubros',r.rubros||'—')}
+          </div>
+          <div class="fb"><h4>Señales</h4>
+            ${fi('Prob. churn',prob+'%')}${fi('Días sin tx',r.dias_sin_tx+'d')}
+            ${fi('Upside SOW',r.oportunidad_soles?'S/ '+fmt(r.oportunidad_soles):'—')}
+          </div>
+          <div class="arg"><strong>Argumento de llamada</strong>${arg}</div>
+          <div class="fac">
+            ${r.telefono?`<button class="btn-sm btn-call" onclick="event.stopPropagation();window.open('tel:${r.telefono}')">Llamar ${r.telefono}</button>`:''}
+            ${r.correo?`<button class="btn-sm btn-sec" onclick="event.stopPropagation();window.open('mailto:${r.correo}?subject=Seguimiento comercial')">Enviar correo</button>`:''}
+            <button class="btn-sm btn-sec" onclick="event.stopPropagation();copyTxt('${encodeURIComponent(arg)}')">Copiar argumento</button>
+          </div>
         </div>
+      </td></tr>`;
+    }
+    return `<tr onclick="expand('${r.nro_documento}')" style="${isExp?'background:#F0EFE9':''}">${base}</tr>${ficha}`;
+  }).join('');
+}
 
-        <div class="form-grid">
-          <label>
-            Status
-            <select id="statusInput">
-              <option>New</option>
-              <option>Contacted</option>
-              <option>In Progress</option>
-              <option>Saved</option>
-              <option>Lost</option>
-              <option>No Action</option>
-            </select>
-          </label>
-          <label>
-            Next follow-up
-            <input id="followUpInput" type="date" />
-          </label>
-          <label>
-            Outcome
-            <select id="outcomeInput">
-              <option value="">No outcome yet</option>
-              <option>Retained</option>
-              <option>Churned</option>
-              <option>False Positive</option>
-              <option>Escalated</option>
-            </select>
-          </label>
-        </div>
+function fi(l,v){return `<div class="fi"><span class="fi-l">${l}</span><span class="fi-v" title="${v}">${v}</span></div>`;}
 
-        <label>
-          Action taken
-          <input id="actionInput" placeholder="Call, discount review, usage check, executive escalation..." />
-        </label>
-        <label>
-          Notes
-          <textarea id="notesInput" rows="5" placeholder="Add KAM notes for this lead"></textarea>
-        </label>
+function expand(doc){expanded=expanded===doc?null:doc;renderTable();}
 
-        <footer class="dialog-actions">
-          <button value="cancel" type="button" id="cancelDialog">Cancel</button>
-          <button value="default" type="submit">Save action</button>
-        </footer>
-      </form>
-    </dialog>
+function genArg(r){
+  const nom=r.nombre?r.nombre.split(' ')[0]:'cliente';
+  const prob=Math.round(r.probabilidad);
+  const sow=r.oportunidad_soles>0;
+  const canal=r.canales?r.canales.split(',')[0].trim():null;
+  const rubro=r.rubros?r.rubros.split(',')[0].trim():null;
+  if(prob>=70&&sow) return `${nom}, notamos que tu actividad${canal?' en '+canal:''} ha bajado ${r.dias_sin_tx} días. Sabemos que parte de tus operaciones${rubro?' de '+rubro:''} van a otro proveedor — tenemos una oportunidad de S/ ${fmt(r.oportunidad_soles)} para recuperar juntos. ¿Cuándo conversamos?`;
+  if(prob>=70) return `${nom}, llevas ${r.dias_sin_tx} días con baja actividad${canal?' en '+canal:''}. Queremos entender qué pasó y cómo seguir siendo tu aliado${rubro?' en '+rubro:''}. ¿Tienes 10 minutos?`;
+  if(sow) return `${nom}, vemos operaciones${rubro?' de '+rubro:''} con otro proveedor por S/ ${fmt(r.oportunidad_soles)}. Tenemos una propuesta para centralizarlo con nosotros. ¿Agendamos?`;
+  return `${nom}, hacemos seguimiento proactivo de tu cuenta. Queremos asegurarnos de que aprovechas todos los beneficios${canal?' en '+canal:''}${rubro?' para tu negocio de '+rubro:''}. ¿Tienes un momento?`;
+}
 
-    <script src="/app.js"></script>
-  </body>
+function copyTxt(enc){
+  navigator.clipboard.writeText(decodeURIComponent(enc)).then(()=>toast('Argumento copiado')).catch(()=>toast('No se pudo copiar'));
+}
+
+function exportCSV(){
+  const rows=kamData.map(r=>({
+    nro_documento:r.nro_documento,nombre:r.nombre,nivel_riesgo:r.nivel,
+    probabilidad:Math.round(r.probabilidad)+'%',ultima_transaccion:r.ultima_transaccion,
+    dias_sin_tx:r.dias_sin_tx,oportunidad_soles:r.oportunidad_soles,
+    canales:r.canales,rubros:r.rubros,correo:r.correo,telefono:r.telefono,
+    ejecutivo_asignado:r.ejecutivo_asignado,argumento:genArg(r)
+  }));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([Papa.unparse(rows)],{type:'text/csv;charset=utf-8;'}));
+  a.download=`leads_${currentKam.replace(/ /g,'_')}_${TODAY.toISOString().slice(0,10)}.csv`;
+  a.click(); toast('CSV exportado');
+}
+
+function fmt(n){return Math.round(n).toLocaleString('es-PE');}
+
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// Carga automática desde Google Sheet
+const SHEET_ID = '1Wv3rURiJzR7iwl8TFguP97bOgerc_sVUUTd8qOhztMg';
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+
+(function autoLoad(){
+  const hint = document.getElementById('uploadHint');
+  hint.style.display = 'block';
+  hint.textContent = 'Cargando datos...';
+  fetch(SHEET_URL)
+    .then(r => { if(!r.ok) throw new Error(r.status); return r.text(); })
+    .then(t => {
+      const result = Papa.parse(t, {header:true, skipEmptyLines:true});
+      init(result.data);
+      hint.style.display = 'none';
+    })
+    .catch(() => {
+      hint.textContent = 'No se pudo cargar automáticamente. Pega la URL manualmente o sube el CSV.';
+    });
+})();
+</script>
+</body>
 </html>
